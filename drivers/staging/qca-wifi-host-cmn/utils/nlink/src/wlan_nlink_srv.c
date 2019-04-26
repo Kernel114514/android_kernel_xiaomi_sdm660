@@ -266,6 +266,54 @@ qdf_export_symbol(nl_srv_is_initialized);
 #include <net/genetlink.h>
 #include <net/cnss_nl.h>
 
+void cld80211_oem_send_reply(struct sk_buff *msg, void *hdr,
+				    struct nlattr *nest, int flags)
+{
+	struct genl_family *cld80211_fam = cld80211_get_genl_family();
+
+	nla_nest_end(msg, nest);
+	genlmsg_end(msg, hdr);
+
+	genlmsg_multicast_netns(cld80211_fam, &init_net, msg, 0,
+				CLD80211_MCGRP_OEM_MSGS, flags);
+}
+
+struct sk_buff *
+cld80211_oem_rsp_alloc_skb(uint32_t portid, void **hdr, struct nlattr **nest,
+			   int *flags)
+{
+	struct sk_buff *msg;
+
+	if (in_interrupt() || irqs_disabled() || in_atomic())
+		*flags = GFP_ATOMIC;
+
+	msg = nlmsg_new(WLAN_CLD80211_MAX_SIZE, *flags);
+	if (!msg) {
+		QDF_TRACE(QDF_MODULE_ID_HDD, QDF_TRACE_LEVEL_ERROR,
+					"nlmsg malloc fails");
+		return NULL;
+	}
+
+	*hdr = nl80211hdr_put(msg, portid, 0, *flags, WLAN_NL_MSG_OEM);
+	if (*hdr == NULL) {
+		QDF_TRACE(QDF_MODULE_ID_HDD, QDF_TRACE_LEVEL_ERROR,
+					"nl80211 hdr put failed");
+		goto nla_put_failure;
+	}
+
+	*nest = nla_nest_start_noflag(msg, CLD80211_ATTR_VENDOR_DATA);
+	if (*nest == NULL) {
+		QDF_TRACE(QDF_MODULE_ID_HDD, QDF_TRACE_LEVEL_ERROR,
+					"nla_nest_start failed");
+		goto nla_put_failure;
+	}
+	return msg;
+nla_put_failure:
+	genlmsg_cancel(msg, *hdr);
+	nlmsg_free(msg);
+	return NULL;
+}
+
 /* For CNSS_GENL netlink sockets will be initialized by CNSS Kernel Module */
 int nl_srv_init(void *wiphy)
 {
@@ -341,7 +389,7 @@ static int cld80211_fill_data(struct sk_buff *msg, uint32_t portid,
 		return -EPERM;
 	}
 
-	nest = nla_nest_start(msg, CLD80211_ATTR_VENDOR_DATA);
+	nest = nla_nest_start_noflag(msg, CLD80211_ATTR_VENDOR_DATA);
 	if (!nest) {
 		QDF_TRACE(QDF_MODULE_ID_HDD, QDF_TRACE_LEVEL_ERROR,
 						"nla_nest_start failed");

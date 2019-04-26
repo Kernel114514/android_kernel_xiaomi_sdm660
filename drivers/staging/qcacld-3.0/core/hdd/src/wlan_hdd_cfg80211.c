@@ -2173,12 +2173,12 @@ hdd_cfg80211_update_channel_info(struct sk_buff *skb,
 	struct hdd_channel_info *icv;
 	int i;
 
-	nla_attr = nla_nest_start(skb, idx);
+	nla_attr = nla_nest_start_noflag(skb, idx);
 	if (!nla_attr)
 		goto fail;
 
 	for (i = 0; i < sap_config->channel_info_count; i++) {
-		channel = nla_nest_start(skb, i);
+		channel = nla_nest_start_noflag(skb, i);
 		if (!channel)
 			goto fail;
 
@@ -2247,13 +2247,12 @@ hdd_cfg80211_update_pcl(struct sk_buff *skb,
 	struct nlattr *nla_attr, *channel;
 	int i;
 
-	nla_attr = nla_nest_start(skb, idx);
-
+	nla_attr = nla_nest_start_noflag(skb, idx);
 	if (!nla_attr)
 		goto fail;
 
 	for (i = 0; i < ch_list_count; i++) {
-		channel = nla_nest_start(skb, i);
+		channel = nla_nest_start_noflag(skb, i);
 		if (!channel)
 			goto fail;
 		if (nla_put_u8(skb, QCA_WLAN_VENDOR_ATTR_PCL_CHANNEL,
@@ -4728,7 +4727,7 @@ hdd_roam_control_config_fill_data(struct hdd_context *hdd_ctx, uint8_t vdev_id,
 	struct nlattr *config;
 	uint32_t full_roam_scan_period;
 
-	config = nla_nest_start(skb, PARAM_ROAM_CONTROL_CONFIG);
+	config = nla_nest_start_noflag(skb, PARAM_ROAM_CONTROL_CONFIG);
 	if (!config) {
 		hdd_err("nla nest start failure");
 		return -EINVAL;
@@ -4764,6 +4763,52 @@ hdd_roam_control_config_fill_data(struct hdd_context *hdd_ctx, uint8_t vdev_id,
 		}
 	}
 
+	if (tb[QCA_ATTR_ROAM_CONTROL_FREQ_LIST_SCHEME]) {
+		hdd_adapter = hdd_get_adapter_by_vdev(hdd_ctx, vdev_id);
+		if (!hdd_adapter) {
+			hdd_info("HDD adapter is NULL");
+			return -EINVAL;
+		}
+
+		hdd_debug("Get roam scan frequencies req received");
+		status = hdd_get_roam_scan_freq(hdd_adapter,
+						hdd_ctx->mac_handle,
+						freq_list, &num_channels);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			hdd_info("failed to get roam scan freq");
+			goto out;
+		}
+
+		hdd_debug("num_channels %d", num_channels);
+		get_freq_scheme = nla_nest_start_noflag(skb,
+							QCA_ATTR_ROAM_CONTROL_FREQ_LIST_SCHEME);
+		if (!get_freq_scheme) {
+			hdd_info("failed to nest start for roam scan freq");
+			return -EINVAL;
+		}
+
+		if (nla_put_u32(skb, PARAM_SCAN_FREQ_LIST_TYPE, 0)) {
+			hdd_info("failed to put list type");
+			return -EINVAL;
+		}
+
+		get_freq = nla_nest_start_noflag(skb,
+						 QCA_ATTR_ROAM_CONTROL_SCAN_FREQ_LIST);
+		if (!get_freq) {
+			hdd_info("failed to nest start for roam scan freq");
+			return -EINVAL;
+		}
+
+		for (i = 0; i < num_channels; i++) {
+			if (nla_put_u32(skb, PARAM_SCAN_FREQ_LIST,
+					freq_list[i])) {
+				hdd_info("failed to put freq at index %d", i);
+				return -EINVAL;
+			}
+		}
+		nla_nest_end(skb, get_freq);
+		nla_nest_end(skb, get_freq_scheme);
+	}
 	nla_nest_end(skb, config);
 out:
 	return qdf_status_to_os_return(status);
@@ -9787,7 +9832,7 @@ static int __wlan_hdd_cfg80211_get_preferred_freq_list(struct wiphy *wiphy,
 	}
 
 	i = QCA_WLAN_VENDOR_ATTR_GET_PREFERRED_FREQ_LIST_WEIGHED_PCL;
-	nla_attr = nla_nest_start(reply_skb, i);
+	nla_attr = nla_nest_start_noflag(reply_skb, i);
 
 	if (!nla_attr) {
 		hdd_err("nla nest start fail");
@@ -9797,7 +9842,7 @@ static int __wlan_hdd_cfg80211_get_preferred_freq_list(struct wiphy *wiphy,
 	}
 
 	for (i = 0; i < pcl_len; i++) {
-		channel = nla_nest_start(reply_skb, i);
+		channel = nla_nest_start_noflag(reply_skb, i);
 		if (!channel) {
 			hdd_err("updating pcl list failed");
 			kfree_skb(reply_skb);
@@ -13178,14 +13223,14 @@ static int hdd_populate_connectivity_check_stats_info(
 	struct nlattr *connect_stats, *connect_info;
 	uint32_t count = 0;
 
-	connect_stats = nla_nest_start(skb, DATA_PKT_STATS);
+	connect_stats = nla_nest_start_noflag(skb, DATA_PKT_STATS);
 	if (!connect_stats) {
 		hdd_err("nla_nest_start failed");
 		return -EINVAL;
 	}
 
 	if (adapter->pkt_type_bitmap & CONNECTIVITY_CHECK_SET_DNS) {
-		connect_info = nla_nest_start(skb, count);
+		connect_info = nla_nest_start_noflag(skb, count);
 		if (!connect_info) {
 			hdd_err("nla_nest_start failed count %u", count);
 			return -EINVAL;
@@ -13198,7 +13243,7 @@ static int hdd_populate_connectivity_check_stats_info(
 	}
 
 	if (adapter->pkt_type_bitmap & CONNECTIVITY_CHECK_SET_TCP_HANDSHAKE) {
-		connect_info = nla_nest_start(skb, count);
+		connect_info = nla_nest_start_noflag(skb, count);
 		if (!connect_info) {
 			hdd_err("nla_nest_start failed count %u", count);
 			return -EINVAL;
@@ -13209,7 +13254,7 @@ static int hdd_populate_connectivity_check_stats_info(
 		nla_nest_end(skb, connect_info);
 		count++;
 
-		connect_info = nla_nest_start(skb, count);
+		connect_info = nla_nest_start_noflag(skb, count);
 		if (!connect_info) {
 			hdd_err("nla_nest_start failed count %u", count);
 			return -EINVAL;
@@ -13220,7 +13265,7 @@ static int hdd_populate_connectivity_check_stats_info(
 		nla_nest_end(skb, connect_info);
 		count++;
 
-		connect_info = nla_nest_start(skb, count);
+		connect_info = nla_nest_start_noflag(skb, count);
 		if (!connect_info) {
 			hdd_err("nla_nest_start failed count %u", count);
 			return -EINVAL;
@@ -13233,7 +13278,7 @@ static int hdd_populate_connectivity_check_stats_info(
 	}
 
 	if (adapter->pkt_type_bitmap & CONNECTIVITY_CHECK_SET_ICMPV4) {
-		connect_info = nla_nest_start(skb, count);
+		connect_info = nla_nest_start_noflag(skb, count);
 		if (!connect_info) {
 			hdd_err("nla_nest_start failed count %u", count);
 			return -EINVAL;
@@ -13844,7 +13889,7 @@ static int wlan_hdd_fill_intf_info(struct sk_buff *skb,
 	if (!hdd_adapter)
 		goto error;
 
-	attr = nla_nest_start(skb, index);
+	attr = nla_nest_start_noflag(skb, index);
 	if (!attr)
 		goto error;
 
@@ -13895,7 +13940,7 @@ static int wlan_hdd_fill_mac_info(struct sk_buff *skb,
 		return 0;
 
 	i = 0;
-	attr = nla_nest_start(skb, mac_id);
+	attr = nla_nest_start_noflag(skb, mac_id);
 	if (!attr)
 		goto error;
 
@@ -13903,7 +13948,8 @@ static int wlan_hdd_fill_mac_info(struct sk_buff *skb,
 	    nla_put_u32(skb, QCA_WLAN_VENDOR_ATTR_MAC_INFO_BAND, band))
 		goto error;
 
-	intf_attr = nla_nest_start(skb, QCA_WLAN_VENDOR_ATTR_MAC_IFACE_INFO);
+	intf_attr = nla_nest_start_noflag(skb,
+					  QCA_WLAN_VENDOR_ATTR_MAC_IFACE_INFO);
 	if (!intf_attr)
 		goto error;
 
@@ -13961,7 +14007,7 @@ int wlan_hdd_send_mode_change_event(void)
 		return -ENOMEM;
 	}
 
-	attr = nla_nest_start(skb, QCA_WLAN_VENDOR_ATTR_MAC_INFO);
+	attr = nla_nest_start_noflag(skb, QCA_WLAN_VENDOR_ATTR_MAC_INFO);
 	if (!attr) {
 		hdd_err("nla_nest_start failed");
 		kfree_skb(skb);
