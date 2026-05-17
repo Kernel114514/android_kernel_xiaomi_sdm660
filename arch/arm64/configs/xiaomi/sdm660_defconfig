@@ -746,3 +746,4 @@ CONFIG_NTSYNC=y
 CONFIG_BPF_LSM=y
 CONFIG_BPF_PRELOAD=y
 CONFIG_LSM="lockdown,yama,loadpin,safesetid,integrity,selinux,smack,tomoyo,apparmor,bpf"
+CONFIG_XDP_SOCKETS=y
