@@ -199,8 +199,8 @@ static int nft_parse_compat(const struct nlattr *attr, u16 *proto, bool *inv)
 	u32 flags;
 	int err;
 
-	err = nla_parse_nested(tb, NFTA_RULE_COMPAT_MAX, attr,
-			       nft_rule_compat_policy, NULL);
+	err = nla_parse_nested_deprecated(tb, NFTA_RULE_COMPAT_MAX, attr,
+					  nft_rule_compat_policy, NULL);
 	if (err < 0)
 		return err;
 
@@ -318,6 +318,22 @@ static int nft_target_validate(const struct nft_ctx *ctx,
 	struct xt_target *target = expr->ops->data;
 	unsigned int hook_mask = 0;
 	int ret;
+
+	if (ctx->family != NFPROTO_IPV4 &&
+	    ctx->family != NFPROTO_IPV6 &&
+	    ctx->family != NFPROTO_INET &&
+	    ctx->family != NFPROTO_BRIDGE &&
+	    ctx->family != NFPROTO_ARP)
+		return -EOPNOTSUPP;
+
+	ret = nft_chain_validate_hooks(ctx->chain,
+				       (1 << NF_INET_PRE_ROUTING) |
+				       (1 << NF_INET_LOCAL_IN) |
+				       (1 << NF_INET_FORWARD) |
+				       (1 << NF_INET_LOCAL_OUT) |
+				       (1 << NF_INET_POST_ROUTING));
+	if (ret)
+		return ret;
 
 	if (nft_is_base_chain(ctx->chain)) {
 		const struct nft_base_chain *basechain =
@@ -559,6 +575,22 @@ static int nft_match_validate(const struct nft_ctx *ctx,
 	struct xt_match *match = expr->ops->data;
 	unsigned int hook_mask = 0;
 	int ret;
+
+	if (ctx->family != NFPROTO_IPV4 &&
+	    ctx->family != NFPROTO_IPV6 &&
+	    ctx->family != NFPROTO_INET &&
+	    ctx->family != NFPROTO_BRIDGE &&
+	    ctx->family != NFPROTO_ARP)
+		return -EOPNOTSUPP;
+
+	ret = nft_chain_validate_hooks(ctx->chain,
+				       (1 << NF_INET_PRE_ROUTING) |
+				       (1 << NF_INET_LOCAL_IN) |
+				       (1 << NF_INET_FORWARD) |
+				       (1 << NF_INET_LOCAL_OUT) |
+				       (1 << NF_INET_POST_ROUTING));
+	if (ret)
+		return ret;
 
 	if (nft_is_base_chain(ctx->chain)) {
 		const struct nft_base_chain *basechain =
