@@ -748,3 +748,4 @@ CONFIG_LSM="lockdown,yama,loadpin,safesetid,integrity,selinux,smack,tomoyo,appar
 CONFIG_XDP_SOCKETS=y
 CONFIG_ANDROID_VENDOR_HOOKS=y
 CONFIG_UDMABUF=y
+CONFIG_DMABUF_SYSFS_STATS=y
