@@ -110,18 +110,14 @@
 };
 
 /* Blue led was used for powersupply of left button key backlight */
-/*
 &blue_led {
 	linux,name = "button-backlight";
 };
-*/
 
 /* Green led was used for powersupply of right button key backlight */
-/*
 &green_led {
 	linux,name = "button-backlight1";
 };
-*/
 
 &soc {
 	sound {
